@@ -1,0 +1,71 @@
+tasks:
+        - name: install prerequis
+          become: yes
+          become_method: sudo
+          yum:
+                name:
+                        - lvm2
+                        - epel-release
+                        - redhat-lsb-core.x86_64
+                        - vim
+                        - git
+                        - unzip
+
+        - name: Create data directory
+          become: yes
+          become_method: sudo
+          command: mkdir /datas
+          ignore_errors: True
+
+        - name: Create new LVM volume group
+          become: yes
+          become_method: sudo
+          lvg:
+                vg: vg-datas
+                pvs: /dev/sdc
+
+        - name: Create new LVM logical volume
+          become: yes
+          become_method: sudo
+          command: lvcreate -l 100%FREE -n lv-datas vg-datas
+
+        - name: Create new filesystem on new LVM logical volume
+          become: yes
+          become_method: sudo
+          command: mkfs.ext4 /dev/vg-datas/lv-datas
+
+        - name: mounting new filesystem
+          become: yes
+          become_method: sudo
+          mount: name=/datas src=/dev/vg-datas/lv-datas fstype=ext4 state=mounted
+
+        - name: Configuration timezone
+          become: yes
+          become_method: sudo
+          command: timedatectl set-timezone Europe/Paris
+
+        - name: Clone conf
+          git:
+                repo: 'https://github.com/ilyan10/centos.git'
+                dest: /tmp/configuration
+                clone: yes
+
+        - name: Copy bashrc
+          command: cp /tmp/configuration/bashrc /etc/bashrc
+          become: yes
+          become_method: sudo
+
+        - name: Copy motd
+          command: cp /tmp/configuration/dynmotd /usr/local/bin/dynmotd
+          become: yes
+          become_method: sudo
+
+        - name: Copy motd2
+          command: cp /tmp/configuration/dynmotd.sh /etc/profile.d/dynmotd.sh
+          become: yes
+          become_method: sudo
+
+        - name: chmod motd
+          command: chmod a+x /etc/profile.d/dynmotd.sh /usr/local/bin/dynmotd
+          become: yes
+          become_method: sudo
